@@ -1,0 +1,40 @@
+809314501300402
+saninco
+421113374@qq.com
+15124533432
+yuhang
+haerbin
+111 hongqi st
+ON
+x1x1x1
+
+2019-02-01
+809314501300501
+TMG Analyties Inc.
+Xin Huang
+13654547040
+huangxin5257@gmail.com
+305-2175 Sheppard Ave. E.
+Toronto
+ON
+M2J 1W8
+
+原始账号1月22
+Serial number: 809314501300402
+Your Name: yuhang
+Your Email: 421113374@qq.com
+Company Name: saninco
+Phone Number: 15124533432
+Address 1: hongqi st 108
+Address 2: 
+City: haerbin
+Province/State: QC
+Postal Code/ZIP: 150032
+Country: Canada
+
+
+数据库路径：
+C:\ProgramData\iAddress\Data\Future
+下的.mdb文件
+
+Kristi
