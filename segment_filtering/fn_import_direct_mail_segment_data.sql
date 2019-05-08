@@ -8,6 +8,8 @@ DECLARE
 BEGIN 
 
 
+	TRUNCATE TABLE master_search RESTART IDENTITY;
+
 	INSERT INTO "public"."master_search" (
 		"masterId",
 		"address",
@@ -28,26 +30,37 @@ BEGIN
 		"sellingPrice",
 		"rentAmount",
 		"postMover",
+		"preMover",
+		"moverType",
 		"livingArea",
 		"bedrooms",
 		"bathrooms",
 		"yearBuilt",
 		"garage",
 		"cableAvailable"
-	)
+	) 
+
 	SELECT
 		e."id",
-		UPPER(e.address),
+		UPPER (e.address),
 		e.unit,
-		UPPER(e."streetNumber"),
-		UPPER(e."streetName"),
-		UPPER(e.city),
-		UPPER(e.province),
+		UPPER (e."streetNumber"),
+		UPPER (e."streetName"),
+		UPPER (e.city),
+		UPPER (e.province),
 		e."provinceId",
 		e."postalCode",
-		e."projectClosingDate"::Date,
-		SUBSTRING(e.latitude from '[-0-9]+\.\d{1,6}') AS latitude,
-		SUBSTRING(e.longitude from '[-0-9]+\.\d{1,6}') AS longitude,
+		e."projectClosingDate" :: DATE,
+		SUBSTRING (
+			e.latitude
+			FROM
+				'[-0-9]+\.\d{1,6}'
+		) AS latitude,
+		SUBSTRING (
+			e.longitude
+			FROM
+				'[-0-9]+\.\d{1,6}'
+		) AS longitude,
 		(
 			CASE
 			WHEN e."projectClosingDate" > CURRENT_DATE THEN
@@ -87,7 +100,7 @@ BEGIN
 			WHEN btype.genera = 'Commercial' THEN
 				'Farm/Commercial'
 			ELSE
-				''
+				'Other'
 			END
 		) AS "propertyType",
 		(
@@ -174,22 +187,7 @@ BEGIN
 		(
 			CASE
 			WHEN (
-				EXTRACT (
-					YEAR
-					FROM
-						age(
-							now() :: TIMESTAMP,
-							e."projectClosingDate" :: TIMESTAMP
-						)
-				) * 12 + EXTRACT (
-					MONTH
-					FROM
-						age(
-							now() :: TIMESTAMP,
-							e."projectClosingDate" :: TIMESTAMP
-						)
-				) > 0
-				AND now() :: TIMESTAMP > e."projectClosingDate" :: TIMESTAMP
+				e."projectClosingDate" <= CURRENT_DATE
 			) THEN
 				(
 					CASE
@@ -326,12 +324,183 @@ BEGIN
 			ELSE
 				''
 			END
-		) AS "timeInNewResidence",
+		) AS "postMover",
 		(
 			CASE
 			WHEN (
-				eit."approxSquareFootage" ~ '-'
+				e."projectClosingDate" > CURRENT_DATE
 			) THEN
+				(
+					CASE
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 1
+					) THEN
+						'< 1 month'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 2
+					) THEN
+						'1 - 2 months'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 3
+					) THEN
+						'2 - 3 months'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 6
+					) THEN
+						'3 - 6 months'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 9
+					) THEN
+						'6 - 9 months'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) < 12
+					) THEN
+						'9 - 12 months'
+					WHEN (
+						EXTRACT (
+							YEAR
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) * 12 + EXTRACT (
+							MONTH
+							FROM
+								age(
+									e."projectClosingDate" :: TIMESTAMP,
+									now() :: TIMESTAMP
+								)
+						) >= 12
+					) THEN
+						'1+ year'
+					END
+				)
+			ELSE
+				''
+			END
+		) AS "preMover",
+		(
+			CASE
+			WHEN e."projectClosingDate" <= CURRENT_DATE THEN
+				'PostMover'
+			WHEN e."projectClosingDate" > CURRENT_DATE THEN
+				'PreMover'
+			END
+		) AS "MoverType",
+		(
+			CASE
+			WHEN eit."approxSquareFootage" IS NOT NULL
+			AND eit."approxSquareFootage" ~ '^[0-9]+$' THEN
+				CASE
+			WHEN (
+				eit."approxSquareFootage" :: INT < 800
+			) THEN
+				'< 800 sqft'
+			WHEN (
+				eit."approxSquareFootage" :: INT < 1200
+			) THEN
+				'800 - 1,200 sqft'
+			WHEN (
+				eit."approxSquareFootage" :: INT < 2000
+			) THEN
+				'1,200 - 2,000 sqft'
+			WHEN (
+				eit."approxSquareFootage" :: INT < 3000
+			) THEN
+				'2,000 - 3,000 sqft'
+			WHEN (
+				eit."approxSquareFootage" :: INT < 4000
+			) THEN
+				'3,000 - 4,000 sqft'
+			ELSE
+				'4,000+ sqft'
+			END
+			WHEN eit."approxSquareFootage" ~ '-' THEN
 				(
 					CASE
 					WHEN (
@@ -379,7 +548,7 @@ BEGIN
 					END
 				)
 			ELSE
-				''
+				'Data Not Available'
 			END
 		) AS "livingArea",
 		(
@@ -387,11 +556,11 @@ BEGIN
 			WHEN (
 				COALESCE (eit."bedrooms", '') = ''
 			) THEN
-				''
-			WHEN (eit.bedrooms :: NUMERIC >= 4) THEN
+				'Data Not Available'
+			WHEN (eit.bedrooms :: NUMERIC > 4) THEN
 				'4+'
 			ELSE
-				COALESCE (eit.bedrooms, '')
+				CAST( CAST(eit.bedrooms :: NUMERIC AS INT) AS CHAR )
 			END
 		) AS "Bedrooms",
 		(
@@ -399,11 +568,11 @@ BEGIN
 			WHEN (
 				COALESCE (eit."bathrooms", '') = ''
 			) THEN
-				''
-			WHEN (eit.bathrooms :: NUMERIC >= 4) THEN
+				'Data Not Available'
+			WHEN (eit.bathrooms :: NUMERIC > 4) THEN
 				'4+'
 			ELSE
-				COALESCE (eit.bathrooms, '')
+				CAST( CAST(eit.bathrooms :: NUMERIC AS INT) AS CHAR ) 
 			END
 		) AS "Bathrooms",
 		(
@@ -419,13 +588,17 @@ BEGIN
 			) THEN
 				'Pre 2010'
 			ELSE
-				''
+				'Data Not Available'
 			END
 		) AS "yearBuilt",
 		(
 			CASE
 			WHEN (
 				COALESCE (eit."garageSpaces", '') = ''
+			) THEN
+				'Data Not Available'
+			WHEN (
+				COALESCE (eit."garageSpaces", '') = '0'
 			) THEN
 				'N'
 			ELSE
@@ -434,32 +607,32 @@ BEGIN
 		) AS "Garage",
 		(
 			CASE
-			WHEN (
-				COALESCE (eit."cableTVIncluded", '') = ''
-			) THEN
-				'N'
-			ELSE
-				'Y'
+				WHEN ( COALESCE (eit."cableTVIncluded", '') = '' ) THEN
+					'Data Not Available'
+				ELSE
+					eit."cableTVIncluded"
 			END
 		) AS "cableAvailable"
 	FROM
 		estate_master e,
 		estate_master_item eit,
-		building_type btype
+		building_type btype --realtor_history rh
 	WHERE
-		e."id" = eit."masterId"
-		AND e."buildingTypeId" = btype."id"
-		AND e."activeFlag" = 'Y'
-		AND e."recActiveFlag" = 'Y'
-		AND COALESCE(e."latitude", '') != ''
-		AND COALESCE(e."longitude", '') != ''
-		AND e."latitude" != '0.0'
-		AND e."longitude" != '0.0'
-	ORDER BY e.id
-	LIMIT 10000;
-
-	AND ( COALESCE(e."latitude", '') != '' OR COALESCE(e."longitude", '') != ''
-		OR e."latitude" != '0.0' OR e."longitude" != '0.0')
+		e."id" = eit."masterId" --AND e."pMlsNumber" = rh."pMlsNumber"
+	AND e."buildingTypeId" = btype."id"
+	AND e."activeFlag" = 'Y'
+	AND e."recActiveFlag" = 'Y'
+	AND (
+		e."tradeTypeId" = 1
+		OR e."tradeTypeId" = 2
+	)
+	AND e."projectClosingDate" IS NOT NULL
+	AND COALESCE (e."latitude", '') != ''
+	AND COALESCE (e."longitude", '') != ''
+	AND e."latitude" != '0.0'
+	AND e."longitude" != '0.0'
+	ORDER BY
+		e. ID
 
 END; 
 $BODY$
