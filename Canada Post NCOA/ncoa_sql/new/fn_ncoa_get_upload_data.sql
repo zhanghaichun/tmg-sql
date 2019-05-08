@@ -56,9 +56,7 @@ BEGIN
         AND em."preMoverFirstName" SIMILAR TO '[a-zA-Z]{2,}'
         AND em."preMoverLastName" SIMILAR TO '[a-zA-Z]{2,}'
         AND em."recActiveFlag" = 'Y'
-        AND em."activeFlag" = 'Y'
-        AND em."iAddressFlag" = 'Y'
-    LIMIT 1;
+        AND em."activeFlag" = 'Y';
 
     -- Update created_date
     -- According to specified space of time.
