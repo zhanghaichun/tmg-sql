@@ -489,5 +489,3 @@ SELECT
     ORDER BY
         e. ID
 limit 1000;
-
--- select TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS');
