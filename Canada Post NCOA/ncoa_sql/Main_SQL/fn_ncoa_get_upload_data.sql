@@ -17,7 +17,6 @@ BEGIN
 
     V_BATCH_NO := TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS');
   
-    -- 从 estate_master 表中查询数据, 插入到 ncoa_estate_master 表中
     INSERT INTO ncoa_estate_master(
         "masterId", 
         "batchNo",
