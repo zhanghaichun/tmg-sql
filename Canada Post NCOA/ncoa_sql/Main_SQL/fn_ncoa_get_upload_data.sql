@@ -17,7 +17,6 @@ BEGIN
 
     V_BATCH_NO := TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS');
   
-    -- 从 estate_master 表中查询数据, 插入到 ncoa_estate_master 表中
     INSERT INTO ncoa_estate_master(
         "masterId", 
         "batchNo",
@@ -64,9 +63,9 @@ BEGIN
     SET "createdDate" = CURRENT_DATE
     WHERE 1 = 1
         AND "createdDate" <= CURRENT_DATE - INTERVAL '30 DAYS' 
-        AND "createdDate" >= CURRENT_DATE - INTERVAL '36 DAYS';
+        AND "createdDate" >= CURRENT_DATE - INTERVAL '36 DAYS'
         AND "ncoaActiveFlag" = 'Y'
-        AND "recActiveFlag" = 'Y'
+        AND "recActiveFlag" = 'Y';
 
     -- Update ncoa state.
     UPDATE ncoa_estate_master 
