@@ -27,3 +27,8 @@ WITH (OIDS=FALSE)
 ALTER TABLE "public"."iaddress_data" OWNER TO "dealtap"; 
 
 
+-- Import data from ncoa_submit table.
+select "masterId", "batchNo", "preMoverFirstName", "preMoverLastName", "normalizedAddress" as "address", city, province, "postalCode" from ncoa_submit
+where "batchNo" = '20190509074250';
+
+

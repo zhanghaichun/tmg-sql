@@ -63,9 +63,9 @@ BEGIN
     SET "createdDate" = CURRENT_DATE
     WHERE 1 = 1
         AND "createdDate" <= CURRENT_DATE - INTERVAL '30 DAYS' 
-        AND "createdDate" >= CURRENT_DATE - INTERVAL '36 DAYS';
+        AND "createdDate" >= CURRENT_DATE - INTERVAL '36 DAYS'
         AND "ncoaActiveFlag" = 'Y'
-        AND "recActiveFlag" = 'Y'
+        AND "recActiveFlag" = 'Y';
 
     -- Update ncoa state.
     UPDATE ncoa_estate_master 

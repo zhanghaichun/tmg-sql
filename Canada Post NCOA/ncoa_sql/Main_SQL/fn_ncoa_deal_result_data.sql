@@ -26,6 +26,7 @@ BEGIN
   
     V_NCOA_PROJECT_CLOSING_DATE := CURRENT_DATE - (V_CANADA_POST_DELAY_PERIOD + V_CANADA_POST_DELAY_PERIOD);
 
+    -- Manually, import ncoa result excel data to ncoa_result DB table.
     FOR V_NCOA_PROCESSED_DATA_RECORD IN
         SELECT *
         FROM ncoa_result nr
@@ -148,7 +149,7 @@ BEGIN
             WHERE 1 = 1
                 AND em."recActiveFlag" = 'Y'
                 AND em."activeFlag" = 'Y'
-                AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
+                AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
                 AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
             -- address + province + city
@@ -161,8 +162,8 @@ BEGIN
             WHERE 1 = 1
                 AND em."recActiveFlag" = 'Y'
                 AND em."activeFlag" = 'Y'
-                AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
-                AND UPPER(em."city") = UPPER(V_NCOA_PROCESSED_DATA_RECORD."city")
+                AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
                 AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
             IF (V_MATCHED_COUNT > 0 OR V_MATCHED_COUNT2 > 0) THEN -- 系统中存在返回的 '新地址'
@@ -185,7 +186,7 @@ BEGIN
                     FROM estate_master em
                     WHERE em."recActiveFlag" = 'Y'
                         AND em."activeFlag" =  'Y'
-                        AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
+                        AND em."accuracyAddress" =V_NCOA_PROCESSED_DATA_RECORD."address"
                         AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
                     IF V_PRE_MOVER_FIRST_NAME = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
@@ -204,7 +205,7 @@ BEGIN
                         WHERE 1 = 1
                             AND "recActiveFlag" = 'Y'
                             AND "activeFlag" = 'Y'
-                            AND LOWER("accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
+                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
                             AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
                     ELSE
@@ -219,7 +220,7 @@ BEGIN
                         WHERE 1 = 1
                             AND "recActiveFlag" = 'Y'
                             AND "activeFlag" = 'Y'
-                            AND LOWER("accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
+                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
                             AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
                     END IF;
@@ -244,8 +245,8 @@ BEGIN
                     FROM estate_master em LEFT JOIN province p ON p."id" = em."provinceId"
                     WHERE em."recActiveFlag" = 'Y'
                         AND em."activeFlag" =  'Y'
-                        AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
-                        AND LOWER(em."city") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."city")
+                        AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                        AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
                         AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
 
@@ -267,8 +268,8 @@ BEGIN
                             AND em."recActiveFlag" = 'Y'
                             AND em."activeFlag" = 'Y'
                             AND p."id" = em."provinceId"
-                            AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
-                            AND LOWER(em."city") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."city")
+                            AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                            AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
                             AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
                     ELSE
@@ -285,8 +286,8 @@ BEGIN
                             AND em."recActiveFlag" = 'Y'
                             AND em."activeFlag" = 'Y'
                             AND p."id" = em."provinceId"
-                            AND LOWER(em."accuracyAddress") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."address")
-                            AND LOWER(em."city") = LOWER(V_NCOA_PROCESSED_DATA_RECORD."city")
+                            AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                            AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
                             AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
                     END IF;
