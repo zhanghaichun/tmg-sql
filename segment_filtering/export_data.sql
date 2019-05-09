@@ -4,12 +4,12 @@ SELECT
             e.latitude
             FROM
                 '[-0-9]+\.\d{1,6}'
-        ) AS Lat,
+        ) AS "Lat",
         SUBSTRING (
             e.longitude
             FROM
                 '[-0-9]+\.\d{1,6}'
-        ) AS Lon,
+        ) AS "Lon",
         
         (
             CASE
@@ -238,7 +238,7 @@ SELECT
                                 )
                         ) < 1
                     ) THEN
-                        '< 30 days'
+                        '< 1 month'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -256,7 +256,7 @@ SELECT
                                 )
                         ) < 2
                     ) THEN
-                        '< 60 days'
+                        '1 - 2 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -274,7 +274,7 @@ SELECT
                                 )
                         ) < 3
                     ) THEN
-                        '< 90 days'
+                        '2 - 3 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -292,7 +292,7 @@ SELECT
                                 )
                         ) < 6
                     ) THEN
-                        '< 180 days'
+                        '3 - 6 months'
                     
                     
                     END
@@ -344,7 +344,7 @@ SELECT
                                 )
                         ) < 2
                     ) THEN
-                        '< 2 months'
+                        '1 -2 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -362,7 +362,7 @@ SELECT
                                 )
                         ) < 3
                     ) THEN
-                        '< 3 months'
+                        '2 - 3 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -380,7 +380,7 @@ SELECT
                                 )
                         ) < 6
                     ) THEN
-                        '< 6 months'
+                        '3 - 6 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -398,7 +398,7 @@ SELECT
                                 )
                         ) < 9
                     ) THEN
-                        '< 9 months'
+                        '6 - 9 months'
                     WHEN (
                         EXTRACT (
                             YEAR
@@ -416,7 +416,7 @@ SELECT
                                 )
                         ) < 12
                     ) THEN
-                        '< 1 yr'
+                        '9 - 12 months'
                     
                     ELSE
                         ''
