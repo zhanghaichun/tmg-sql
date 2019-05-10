@@ -30,8 +30,7 @@ BEGIN
     FOR V_NCOA_PROCESSED_DATA_RECORD IN
         SELECT *
         FROM ncoa_result nr
-        WHERE nr."recActiveFlag" = 'Y'
-            AND nr."batchNo" = PARAM_BATCH_NO
+        WHERE nr."batchNo" = PARAM_BATCH_NO
     LOOP
 
         UPDATE ncoa_estate_master
@@ -315,7 +314,7 @@ BEGIN
                         "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
                     );
 
-            END IF;
+            END IF; -- V_MATCHED_COUNT, V_MATCHED_COUNT2
 
         END IF;
 
