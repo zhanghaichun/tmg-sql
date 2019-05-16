@@ -631,7 +631,8 @@ BEGIN
 	AND COALESCE (e."longitude", '') != ''
 	AND e."latitude" != '0.0'
 	AND e."longitude" != '0.0'
-	
+	ORDER BY
+		e. ID
 
 END; 
 $BODY$
