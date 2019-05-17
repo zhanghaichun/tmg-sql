@@ -124,7 +124,17 @@ BEGIN
         -- 根据 ncoa 之后的状态来处理返回的数据。
         IF ( V_NCOA_PROCESSED_DATA_RECORD."ncoa" IN ('AI', 'AB', 'AF') ) THEN -- Moved
 
-            -- 更新 project closing date.
+            -- Update 'projectClosingDate' in ncoa_estate_master database table.
+            UPDATE ncoa_estate_master
+            SET "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE
+            WHERE "recActiveFlag" = 'Y'
+                AND (
+                    "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
+                    OR
+                    "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
+                );
+
+            -- Update 'projectClosingDate' in estate_master database table.
             UPDATE estate_master
             SET "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE
             WHERE 1 = 1 
@@ -140,7 +150,8 @@ BEGIN
 
             -- Search the post mover address is exist in tmg database or not.
             -- address + postal code
-            SELECT COUNT(1), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(id)) ), ',') 
+            -- Stripping out record which 'delistedDate' is null.
+            SELECT COUNT(em."delistedDate"), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(id)) ), ',') 
                 INTO 
                     V_MATCHED_COUNT,
                     V_MASTER_IDS 
@@ -152,7 +163,8 @@ BEGIN
                 AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
             -- address + province + city
-            SELECT COUNT(1), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(em.id)) ), ',')
+            -- Stripping out record which 'delistedDate' is null.
+            SELECT COUNT(em."delistedDate"), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(em.id)) ), ',')
                 INTO 
                     V_MATCHED_COUNT2,
                     V_MASTER_IDS2 
@@ -322,9 +334,9 @@ BEGIN
 
     -- Update 'UN' flag data
     UPDATE ncoa_estate_master
-    SET ncoa = 'UN', "ncoaActiveFlag" = 'N'
+    SET ncoa = 'UN', "ncoaActiveFlag" = 'N', "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE
     WHERE "recActiveFlag" = 'Y'
-        AND COALESCE(ncoa, '') = ''
+        AND ncoa IS NULL
         AND "batchNo" = PARAM_BATCH_NO;
 
     UPDATE estate_master em
