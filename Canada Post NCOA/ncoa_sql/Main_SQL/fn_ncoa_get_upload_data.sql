@@ -60,7 +60,7 @@ BEGIN
     -- Update created_date
     -- According to specified space of time.
     UPDATE ncoa_estate_master
-    SET "createdDate" = CURRENT_DATE
+    SET "createdDate" = CURRENT_DATE, ncoa = NULL
     WHERE 1 = 1
         AND "createdDate" <= CURRENT_DATE - INTERVAL '30 DAYS' 
         AND "createdDate" >= CURRENT_DATE - INTERVAL '36 DAYS'
