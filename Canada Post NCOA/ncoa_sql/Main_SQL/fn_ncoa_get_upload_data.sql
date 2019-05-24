@@ -75,7 +75,7 @@ BEGIN
         AND "createdDate" = CURRENT_DATE;
 
     -- Distinct the repeated address records.
-    PERFORM fn_ncoa_distinct_submit_data(V_BATCH_NO);
+    -- PERFORM fn_ncoa_distinct_submit_data(V_BATCH_NO);
 
     -- Insert data records into noca_submit table that
     -- submitting the data to NCOA.

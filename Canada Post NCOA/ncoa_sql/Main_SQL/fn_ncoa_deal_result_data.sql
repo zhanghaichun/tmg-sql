@@ -12,6 +12,15 @@ DECLARE
     V_MATCHED_COUNT INT; 
     V_MATCHED_COUNT2 INT;
 
+    V_MATCHED_ID INT; 
+    V_MATCHED_ID2 INT;
+
+    V_MATCHED_PROJECT_CLOSING_DATE INT; 
+    V_MATCHED_PROJECT_CLOSING_DATE2 INT;
+
+    V_MATCHED_DELISTED_DATE INT; 
+    V_MATCHED_DELISTED_DATE2 INT;
+
     V_CANADA_POST_DELAY_PERIOD INT DEFAULT 5; 
     V_NCOA_POST_DELAY_PERIOD INT DEFAULT 5;
 
@@ -21,12 +30,14 @@ DECLARE
     V_MASTER_IDS2 VARCHAR(64);
 
     V_NCOA_PROJECT_CLOSING_DATE DATE;
+    V_NCOA_DELISTED_DATE DATE;
 
 BEGIN
   
     V_NCOA_PROJECT_CLOSING_DATE := fn_ncoa_avoid_holiday_and_weekend(
             CURRENT_DATE - (V_CANADA_POST_DELAY_PERIOD + V_CANADA_POST_DELAY_PERIOD)
         );
+
 
     -- Manually, import ncoa result excel data to ncoa_result DB table.
     FOR V_NCOA_PROCESSED_DATA_RECORD IN
@@ -44,7 +55,7 @@ BEGIN
             "address" = V_NCOA_PROCESSED_DATA_RECORD."address" ,
             "city" = V_NCOA_PROCESSED_DATA_RECORD."city",
             "provAcronym" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym",
-            "postalCode" = V_NCOA_PROCESSED_DATA_RECORD."postalCode",
+            "postalCode" = replace(V_NCOA_PROCESSED_DATA_RECORD."postalCode", ' ', ''),
             "address2"  = V_NCOA_PROCESSED_DATA_RECORD."address2",
             "country" = V_NCOA_PROCESSED_DATA_RECORD."country",
             "originalFirstName" = V_NCOA_PROCESSED_DATA_RECORD."originalFirstName",
@@ -100,12 +111,8 @@ BEGIN
             "comment" = V_NCOA_PROCESSED_DATA_RECORD."comment",
             "addExtra" = V_NCOA_PROCESSED_DATA_RECORD."addExtra"      
         WHERE "recActiveFlag" = 'Y' 
-          AND (
-                "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                OR
-                "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-              );
-
+          AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
+                
         -- Update ncoa flag.
         UPDATE ncoa_estate_master
         SET "ncoaActiveFlag" = (
@@ -117,56 +124,45 @@ BEGIN
             END
         )
         WHERE "recActiveFlag" = 'Y'
-            AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
+            AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
                
-
         -- 根据 ncoa 之后的状态来处理返回的数据。
         IF ( V_NCOA_PROCESSED_DATA_RECORD."ncoa" IN ('AI', 'AB', 'AF') ) THEN -- Moved
 
             -- Update 'projectClosingDate' in ncoa_estate_master database table.
             UPDATE ncoa_estate_master
             SET "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE
-            WHERE "recActiveFlag" = 'Y'
-                AND (
-                    "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                    OR
-                    "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                );
+            WHERE "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId" ;
 
             -- Update 'projectClosingDate' in estate_master database table.
             UPDATE estate_master
             SET "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE
-            WHERE 1 = 1 
-                AND "id" in (
-                    SELECT "masterId" FROM ncoa_estate_master
-                    WHERE "recActiveFlag" = 'Y'
-                        AND (
-                            "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                            OR
-                            "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                        )
-                );
-
-            -- Search the post mover address is exist in tmg database or not.
-            -- address + postal code
-            -- Stripping out record which 'delistedDate' is null.
-            SELECT COUNT(em."delistedDate"), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(id)) ), ',') 
-                INTO 
-                    V_MATCHED_COUNT,
-                    V_MASTER_IDS 
+            WHERE "id" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
+            
+            SELECT 
+                em.id ,
+                TO_CHAR(em."delistedDate", 'YYYY-MM-DD') AS "delistedDate", 
+                TO_CHAR(em."projectClosingDate", 'YYYY-MM-DD') AS "projectClosingDate" 
+                    INTO 
+                        V_MATCHED_ID,
+                        V_MATCHED_DELISTED_DATE,
+                        V_MATCHED_PROJECT_CLOSING_DATE 
             FROM estate_master em
             WHERE 1 = 1
                 AND em."recActiveFlag" = 'Y'
                 AND em."activeFlag" = 'Y'
                 AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+                AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3)
+            LIMIT 1;
 
-            -- address + province + city
-            -- Stripping out record which 'delistedDate' is null.
-            SELECT COUNT(em."delistedDate"), ARRAY_TO_STRING( ARRAY( SELECT unnest(array_agg(em.id)) ), ',')
-                INTO 
-                    V_MATCHED_COUNT2,
-                    V_MASTER_IDS2 
+            SELECT 
+                em.id ,
+                TO_CHAR(em."delistedDate", 'YYYY-MM-DD') AS "delistedDate", 
+                TO_CHAR(em."projectClosingDate", 'YYYY-MM-DD') AS "projectClosingDate" 
+                    INTO 
+                        V_MATCHED_ID2,
+                        V_MATCHED_DELISTED_DATE2,
+                        V_MATCHED_PROJECT_CLOSING_DATE2 
             FROM estate_master em
                 LEFT JOIN province p ON p."id" = em."provinceId" 
             WHERE 1 = 1
@@ -174,14 +170,17 @@ BEGIN
                 AND em."activeFlag" = 'Y'
                 AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
                 AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
-                AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
+                AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym"
+            LIMIT 1;
 
-            IF (V_MATCHED_COUNT > 0 OR V_MATCHED_COUNT2 > 0) THEN -- 系统中存在返回的 '新地址'
+            IF (V_MATCHED_ID IS NOT NULL OR V_MATCHED_ID2 IS NOT NULL) THEN -- 系统中存在返回的 '新地址'
 
-                IF V_MATCHED_COUNT > 0 THEN
+                -- Matched by accuracyAddress + postalCode
+                IF V_MATCHED_ID IS NOT NULL THEN
 
                     UPDATE ncoa_estate_master
-                    SET "ncoaMatchedMasterIds" = V_MASTER_IDS
+                    SET "ncoaMatchedMasterIds" = V_MATCHED_ID, 
+                        "ncoaMatchedProjectClosingDate" = V_MATCHED_PROJECT_CLOSING_DATE
                     WHERE "recActiveFlag" = 'Y'
                         AND (
                             "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
@@ -197,7 +196,8 @@ BEGIN
                     WHERE em."recActiveFlag" = 'Y'
                         AND em."activeFlag" =  'Y'
                         AND em."accuracyAddress" =V_NCOA_PROCESSED_DATA_RECORD."address"
-                        AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+                        AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3)
+                    LIMIT 1;
 
                     IF V_PRE_MOVER_FIRST_NAME = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
                         AND V_PRE_MOVER_LAST_NAME = V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
@@ -219,7 +219,6 @@ BEGIN
                             AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
 
                     ELSE
-
                         -- address 和 postal code 前三位
                         UPDATE estate_master
                         SET
@@ -235,12 +234,27 @@ BEGIN
 
                     END IF;
 
+                    IF V_MATCHED_DELISTED_DATE IS NULL THEN
+
+                        UPDATE estate_master
+                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
+                        WHERE 1 = 1
+                            AND "recActiveFlag" = 'Y'
+                            AND "activeFlag" = 'Y'
+                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                            AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+
+                    END IF;
+
                 END IF;
 
-                IF V_MATCHED_COUNT2 > 0 THEN
+                -- Matched by accuracyAddress + city + province.
+                IF V_MATCHED_ID2 IS NOT NULL THEN
 
                     UPDATE ncoa_estate_master
-                    SET "ncoaMatchedMasterIds" = V_MASTER_IDS2
+                    SET 
+                        "ncoaMatchedMasterIds" = V_MATCHED_ID2,
+                        "ncoaMatchedProjectClosingDate" = V_MATCHED_PROJECT_CLOSING_DATE2
                     WHERE "recActiveFlag" = 'Y'
                         AND (
                             "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
@@ -257,7 +271,8 @@ BEGIN
                         AND em."activeFlag" =  'Y'
                         AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
                         AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
-                        AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
+                        AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym"
+                    LIMIT 1;
 
 
                     IF V_PRE_MOVER_FIRST_NAME = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
@@ -302,30 +317,35 @@ BEGIN
 
                     END IF;
 
+                    -- When the delistedDate is null
+                    IF V_MATCHED_DELISTED_DATE2 IS NULL THEN
+
+                        UPDATE estate_master
+                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
+                        WHERE 1 = 1
+                            AND "recActiveFlag" = 'Y'
+                            AND "activeFlag" = 'Y'
+                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                            AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+
+                    END IF;
+
                 END IF;
 
                 -- 更新 ncoa 流程状态。
                 UPDATE ncoa_estate_master
                 SET "ncoaWorkflowStatusId" = 4
                 WHERE "recActiveFlag" = 'Y'
-                    AND (
-                        "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                        OR
-                        "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                    );
+                    AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
 
             ELSE -- 系统中不存在返回的新地址
 
                 UPDATE ncoa_estate_master
                 SET "ncoaWorkflowStatusId" = 5
                 WHERE "recActiveFlag" = 'Y'
-                    AND (
-                        "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                        OR
-                        "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                    );
+                    AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
 
-            END IF; -- V_MATCHED_COUNT, V_MATCHED_COUNT2
+            END IF; -- MATCHED_DELISTED_DATE2 IS NOT NULL OR V_MATCHED_DELISTED_DATE IS NOT NULL
 
         END IF;
 
