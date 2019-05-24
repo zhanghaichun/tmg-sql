@@ -115,11 +115,8 @@ BEGIN
             END
         )
         WHERE "recActiveFlag" = 'Y'
-            AND (
-                "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                OR
-                "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-            );
+            AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
+               
 
         -- 根据 ncoa 之后的状态来处理返回的数据。
         IF ( V_NCOA_PROCESSED_DATA_RECORD."ncoa" IN ('AI', 'AB', 'AF') ) THEN -- Moved
