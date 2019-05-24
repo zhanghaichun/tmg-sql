@@ -24,7 +24,9 @@ DECLARE
 
 BEGIN
   
-    V_NCOA_PROJECT_CLOSING_DATE := CURRENT_DATE - (V_CANADA_POST_DELAY_PERIOD + V_CANADA_POST_DELAY_PERIOD);
+    V_NCOA_PROJECT_CLOSING_DATE := fn_ncoa_avoid_holiday_and_weekend(
+            CURRENT_DATE - (V_CANADA_POST_DELAY_PERIOD + V_CANADA_POST_DELAY_PERIOD)
+        );
 
     -- Manually, import ncoa result excel data to ncoa_result DB table.
     FOR V_NCOA_PROCESSED_DATA_RECORD IN
