@@ -260,7 +260,8 @@ BEGIN
                     IF V_MATCHED_DELISTED_DATE IS NULL THEN
 
                         UPDATE estate_master
-                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
+                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id),
+                            "projectDelistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
                         WHERE 1 = 1
                             AND "recActiveFlag" = 'Y'
                             AND "activeFlag" = 'Y'
@@ -338,7 +339,8 @@ BEGIN
                     IF V_MATCHED_DELISTED_DATE2 IS NULL THEN
 
                         UPDATE estate_master em
-                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
+                        SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id),
+                            "projectDelistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
                         FROM province p
                         WHERE 1 = 1
                             AND em."recActiveFlag" = 'Y'
