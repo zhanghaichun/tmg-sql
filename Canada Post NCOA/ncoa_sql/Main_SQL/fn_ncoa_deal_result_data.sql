@@ -9,28 +9,36 @@ DECLARE
      */
 
     V_NCOA_PROCESSED_DATA_RECORD RECORD;
-    V_MATCHED_COUNT INT; 
-    V_MATCHED_COUNT2 INT;
-
-    V_MATCHED_ID INT; 
-    V_MATCHED_ID2 INT;
-
-    V_MATCHED_PROJECT_CLOSING_DATE INT; 
-    V_MATCHED_PROJECT_CLOSING_DATE2 INT;
-
-    V_MATCHED_DELISTED_DATE INT; 
-    V_MATCHED_DELISTED_DATE2 INT;
 
     V_CANADA_POST_DELAY_PERIOD INT DEFAULT 5; 
     V_NCOA_POST_DELAY_PERIOD INT DEFAULT 5;
 
+    V_NCOA_PROJECT_CLOSING_DATE DATE;
+
+    
+    -- For postal code matching.
+    V_MATCHED_ID INT;
+    V_MATCHED_DELISTED_DATE DATE; 
+    V_MATCHED_PROJECT_CLOSING_DATE DATE;
+
     V_PRE_MOVER_FIRST_NAME VARCHAR(64);
     V_PRE_MOVER_LAST_NAME VARCHAR(64);
-    V_MASTER_IDS VARCHAR(64);
-    V_MASTER_IDS2 VARCHAR(64);
+    V_POST_MOVER_FIRST_NAME VARCHAR(64);
+    V_POST_MOVER_LAST_NAME VARCHAR(64); 
 
-    V_NCOA_PROJECT_CLOSING_DATE DATE;
-    V_NCOA_DELISTED_DATE DATE;
+    -- For city, province matching.
+    V_MATCHED_ID2 INT;
+    V_MATCHED_PROJECT_CLOSING_DATE2 DATE;
+    V_MATCHED_DELISTED_DATE2 DATE;
+
+    V_PRE_MOVER_FIRST_NAME2 VARCHAR(64);
+    V_PRE_MOVER_LAST_NAME2 VARCHAR(64);
+    V_POST_MOVER_FIRST_NAME2 VARCHAR(64);
+    V_POST_MOVER_LAST_NAME2 VARCHAR(64);
+
+    
+
+    
 
 BEGIN
   
@@ -38,12 +46,12 @@ BEGIN
             CURRENT_DATE - (V_CANADA_POST_DELAY_PERIOD + V_CANADA_POST_DELAY_PERIOD)
         );
 
-
     -- Manually, import ncoa result excel data to ncoa_result DB table.
     FOR V_NCOA_PROCESSED_DATA_RECORD IN
         SELECT *
         FROM ncoa_result nr
         WHERE nr."batchNo" = PARAM_BATCH_NO
+        -- LIMIT 10
     LOOP
 
         UPDATE ncoa_estate_master
@@ -141,12 +149,20 @@ BEGIN
             
             SELECT 
                 em.id ,
-                TO_CHAR(em."delistedDate", 'YYYY-MM-DD') AS "delistedDate", 
-                TO_CHAR(em."projectClosingDate", 'YYYY-MM-DD') AS "projectClosingDate" 
+                em."delistedDate", 
+                em."projectClosingDate",
+                em."preMoverFirstName", 
+                em."preMoverLastName",
+                em."postMoverFirstName",
+                em."postMoverLastName"
                     INTO 
                         V_MATCHED_ID,
                         V_MATCHED_DELISTED_DATE,
-                        V_MATCHED_PROJECT_CLOSING_DATE 
+                        V_MATCHED_PROJECT_CLOSING_DATE,
+                        V_PRE_MOVER_FIRST_NAME,
+                        V_PRE_MOVER_LAST_NAME,
+                        V_POST_MOVER_FIRST_NAME,
+                        V_POST_MOVER_LAST_NAME
             FROM estate_master em
             WHERE 1 = 1
                 AND em."recActiveFlag" = 'Y'
@@ -157,12 +173,20 @@ BEGIN
 
             SELECT 
                 em.id ,
-                TO_CHAR(em."delistedDate", 'YYYY-MM-DD') AS "delistedDate", 
-                TO_CHAR(em."projectClosingDate", 'YYYY-MM-DD') AS "projectClosingDate" 
+                em."delistedDate", 
+                em."projectClosingDate",
+                em."preMoverFirstName", 
+                em."preMoverLastName",
+                em."postMoverFirstName",
+                em."postMoverLastName" 
                     INTO 
                         V_MATCHED_ID2,
                         V_MATCHED_DELISTED_DATE2,
-                        V_MATCHED_PROJECT_CLOSING_DATE2 
+                        V_MATCHED_PROJECT_CLOSING_DATE2,
+                        V_PRE_MOVER_FIRST_NAME2,
+                        V_PRE_MOVER_LAST_NAME2,
+                        V_POST_MOVER_FIRST_NAME2,
+                        V_POST_MOVER_LAST_NAME2 
             FROM estate_master em
                 LEFT JOIN province p ON p."id" = em."provinceId" 
             WHERE 1 = 1
@@ -182,58 +206,57 @@ BEGIN
                     SET "ncoaMatchedMasterIds" = V_MATCHED_ID, 
                         "ncoaMatchedProjectClosingDate" = V_MATCHED_PROJECT_CLOSING_DATE
                     WHERE "recActiveFlag" = 'Y'
-                        AND (
-                            "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                            OR
-                            "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                        );
+                        AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
 
-                    SELECT em."preMoverFirstName", em."preMoverLastName" 
-                        INTO 
-                            V_PRE_MOVER_FIRST_NAME,
-                            V_PRE_MOVER_LAST_NAME
-                    FROM estate_master em
-                    WHERE em."recActiveFlag" = 'Y'
-                        AND em."activeFlag" =  'Y'
-                        AND em."accuracyAddress" =V_NCOA_PROCESSED_DATA_RECORD."address"
-                        AND SUBSTRING(em."postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3)
-                    LIMIT 1;
-
+                    -- Judging pre mover info.
                     IF V_PRE_MOVER_FIRST_NAME = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
                         AND V_PRE_MOVER_LAST_NAME = V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
 
-                        -- address 和 postal code 前三位
-                        UPDATE estate_master
-                        SET
-                            "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
-                            "preMoverFirstName" = NULL,
-                            "preMoverLastName" = NULL,
-                            "preMoverPhoneNumber" = NULL,
-                            "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
-                            "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
-                            "postMoverInfoFrom" = 6 -- NCOA
-                        WHERE 1 = 1
-                            AND "recActiveFlag" = 'Y'
-                            AND "activeFlag" = 'Y'
-                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                            AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+                        IF V_POST_MOVER_FIRST_NAME != V_NCOA_PROCESSED_DATA_RECORD."firstName" OR V_POST_MOVER_LAST_NAME != V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
+
+                            -- address 和 postal code 前三位
+                            UPDATE estate_master
+                            SET
+                                "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
+                                "preMoverFirstName" = NULL,
+                                "preMoverLastName" = NULL,
+                                "preMoverPhoneNumber" = NULL,
+                                "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
+                                "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
+                                "postMoverPhoneNumber" = NULL,
+                                "postMoverInfoFrom" = 6 -- NCOA
+                            WHERE 1 = 1
+                                AND "recActiveFlag" = 'Y'
+                                AND "activeFlag" = 'Y'
+                                AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                                AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+
+                        END IF;
 
                     ELSE
-                        -- address 和 postal code 前三位
-                        UPDATE estate_master
-                        SET
-                            "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
-                            "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
-                            "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
-                            "postMoverInfoFrom" = 6 -- NCOA
-                        WHERE 1 = 1
-                            AND "recActiveFlag" = 'Y'
-                            AND "activeFlag" = 'Y'
-                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                            AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+
+                        IF V_POST_MOVER_FIRST_NAME != V_NCOA_PROCESSED_DATA_RECORD."firstName" OR V_POST_MOVER_LAST_NAME != V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
+
+                            -- address 和 postal code 前三位
+                            UPDATE estate_master
+                            SET
+                                "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
+                                "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
+                                "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
+                                "postMoverPhoneNumber" = NULL,
+                                "postMoverInfoFrom" = 6 -- NCOA
+                            WHERE 1 = 1
+                                AND "recActiveFlag" = 'Y'
+                                AND "activeFlag" = 'Y'
+                                AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                                AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+
+                        END IF;
+                        
 
                     END IF;
 
+                    -- Updating delisted date when delisted date is null of matched record.
                     IF V_MATCHED_DELISTED_DATE IS NULL THEN
 
                         UPDATE estate_master
@@ -256,77 +279,74 @@ BEGIN
                         "ncoaMatchedMasterIds" = V_MATCHED_ID2,
                         "ncoaMatchedProjectClosingDate" = V_MATCHED_PROJECT_CLOSING_DATE2
                     WHERE "recActiveFlag" = 'Y'
-                        AND (
-                            "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                            OR
-                            "referenceMasterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId"
-                        );
+                        AND "masterId" = V_NCOA_PROCESSED_DATA_RECORD."masterId";
 
-                    SELECT em."preMoverFirstName", em."preMoverLastName" 
-                        INTO 
-                            V_PRE_MOVER_FIRST_NAME,
-                            V_PRE_MOVER_LAST_NAME
-                    FROM estate_master em LEFT JOIN province p ON p."id" = em."provinceId"
-                    WHERE em."recActiveFlag" = 'Y'
-                        AND em."activeFlag" =  'Y'
-                        AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                        AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
-                        AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym"
-                    LIMIT 1;
+                    IF V_PRE_MOVER_FIRST_NAME2 = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
+                        AND V_PRE_MOVER_LAST_NAME2 = V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
 
+                        IF V_POST_MOVER_FIRST_NAME2 != V_NCOA_PROCESSED_DATA_RECORD."firstName" OR V_POST_MOVER_LAST_NAME2 != V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
 
-                    IF V_PRE_MOVER_FIRST_NAME = V_NCOA_PROCESSED_DATA_RECORD."firstName" 
-                        AND V_PRE_MOVER_LAST_NAME = V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
+                            -- address， province, city 作为补充。
+                            UPDATE estate_master em
+                            SET
+                                "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
+                                "preMoverFirstName" = NULL,
+                                "preMoverLastName" = NULL,
+                                "preMoverPhoneNumber" = NULL,
+                                "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
+                                "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
+                                "postMoverPhoneNumber" = NULL,
+                                "postMoverInfoFrom" = 6 -- NCOA
+                            FROM province p
+                            WHERE 1 = 1
+                                AND em."recActiveFlag" = 'Y'
+                                AND em."activeFlag" = 'Y'
+                                AND p."id" = em."provinceId"
+                                AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                                AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
+                                AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
-                        -- address， province, city 作为补充。
-                        UPDATE estate_master em
-                        SET
-                            "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
-                            "preMoverFirstName" = NULL,
-                            "preMoverLastName" = NULL,
-                            "preMoverPhoneNumber" = NULL,
-                            "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
-                            "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
-                            "postMoverInfoFrom" = 6 -- NCOA
-                        FROM province p
-                        WHERE 1 = 1
-                            AND em."recActiveFlag" = 'Y'
-                            AND em."activeFlag" = 'Y'
-                            AND p."id" = em."provinceId"
-                            AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                            AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
-                            AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
+                        END IF;
 
                     ELSE
 
-                        -- address， province, city 作为补充。
-                        UPDATE estate_master em
-                        SET
-                            "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
-                            "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
-                            "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
-                            "postMoverInfoFrom" = 6 -- NCOA
-                        FROM province p
-                        WHERE 1 = 1
-                            AND em."recActiveFlag" = 'Y'
-                            AND em."activeFlag" = 'Y'
-                            AND p."id" = em."provinceId"
-                            AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                            AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
-                            AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
+                        IF V_POST_MOVER_FIRST_NAME2 != V_NCOA_PROCESSED_DATA_RECORD."firstName" OR V_POST_MOVER_LAST_NAME2 != V_NCOA_PROCESSED_DATA_RECORD."lastName" THEN
+
+                            -- address， province, city 作为补充。
+                            UPDATE estate_master em
+                            SET
+                                "projectClosingDate" = V_NCOA_PROJECT_CLOSING_DATE,
+                                "postMoverFirstName" = V_NCOA_PROCESSED_DATA_RECORD."firstName",
+                                "postMoverLastName" = V_NCOA_PROCESSED_DATA_RECORD."lastName",
+                                "postMoverPhoneNumber" = NULL,
+                                "postMoverInfoFrom" = 6 -- NCOA
+                            FROM province p
+                            WHERE 1 = 1
+                                AND em."recActiveFlag" = 'Y'
+                                AND em."activeFlag" = 'Y'
+                                AND p."id" = em."provinceId"
+                                AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                                AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
+                                AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
+
+                        END IF;
+                        
 
                     END IF;
 
                     -- When the delistedDate is null
                     IF V_MATCHED_DELISTED_DATE2 IS NULL THEN
 
-                        UPDATE estate_master
+                        UPDATE estate_master em
                         SET "delistedDate" = fn_calculate_delisted_date(V_NCOA_PROJECT_CLOSING_DATE, id)
+                        FROM province p
                         WHERE 1 = 1
-                            AND "recActiveFlag" = 'Y'
-                            AND "activeFlag" = 'Y'
-                            AND "accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
-                            AND SUBSTRING("postalCode", 1, 3) = SUBSTRING(V_NCOA_PROCESSED_DATA_RECORD."postalCode", 1, 3);
+                            AND em."recActiveFlag" = 'Y'
+                            AND em."activeFlag" = 'Y'
+                            AND p."id" = em."provinceId"
+                            AND em."accuracyAddress" = V_NCOA_PROCESSED_DATA_RECORD."address"
+                            AND em."city" = V_NCOA_PROCESSED_DATA_RECORD."city"
+                            AND p."code" = V_NCOA_PROCESSED_DATA_RECORD."provAcronym";
 
                     END IF;
 

@@ -32,3 +32,15 @@ select "masterId", "batchNo", "preMoverFirstName", "preMoverLastName", "normaliz
 where "batchNo" = '20190509074250';
 
 
+-- 20190509074250
+-- 20190517001450
+-- 20190524003202
+-- 上面的这三批数据是需要恢复 project closing date 的。
+select * from ncoa_estate_master
+where "batchNo" in (
+	'20190509074250',
+	'20190517001450',
+	'20190524003202'
+);
+
+
