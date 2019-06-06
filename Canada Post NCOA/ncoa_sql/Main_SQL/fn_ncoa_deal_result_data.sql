@@ -151,10 +151,10 @@ BEGIN
                 em.id ,
                 em."delistedDate", 
                 em."projectClosingDate",
-                em."preMoverFirstName", 
-                em."preMoverLastName",
-                em."postMoverFirstName",
-                em."postMoverLastName"
+                COALESCE(em."preMoverFirstName", ''), 
+                COALESCE(em."preMoverLastName", ''),
+                COALESCE(em."postMoverFirstName", ''),
+                COALESCE(em."postMoverLastName", '')
                     INTO 
                         V_MATCHED_ID,
                         V_MATCHED_DELISTED_DATE,
@@ -175,10 +175,10 @@ BEGIN
                 em.id ,
                 em."delistedDate", 
                 em."projectClosingDate",
-                em."preMoverFirstName", 
-                em."preMoverLastName",
-                em."postMoverFirstName",
-                em."postMoverLastName" 
+                COALESCE(em."preMoverFirstName", ''), 
+                COALESCE(em."preMoverLastName", ''),
+                COALESCE(em."postMoverFirstName", ''),
+                COALESCE(em."postMoverLastName", '')
                     INTO 
                         V_MATCHED_ID2,
                         V_MATCHED_DELISTED_DATE2,
